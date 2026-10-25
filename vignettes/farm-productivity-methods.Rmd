@@ -1,0 +1,169 @@
+---
+title: "Farm productivity: methods, periods, and revisions"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Farm productivity: methods, periods, and revisions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The farm-productivity reader is useful when a productivity workbook needs to
+be analysed without losing the source table, method, geography, or financial
+year that gave an observation its meaning. This vignette uses the small
+package fixture shipped at `inst/fixtures/workbooks/farm-productivity.xlsx`.
+The fixture is package-owned synthetic data: it is structurally faithful to
+the workbook profile, but its values are not an official ABARES release.
+
+## Read a local workbook
+
+Local paths are deterministic and do not require discovery or network access.
+Use a cache below `tempdir()` for a vignette, test, or batch job rather than
+writing to a home or project directory.
+
+```{r setup}
+library(readagau)
+
+farm_file <- system.file(
+  "fixtures", "workbooks", "farm-productivity.xlsx", package = "readagau"
+)
+stopifnot(nzchar(farm_file), file.exists(farm_file))
+
+farm_cache <- tempfile("readagau-farm-productivity-")
+dir.create(farm_cache)
+
+productivity <- read_farm_productivity(
+  release = farm_file,
+  adjustment = "all",
+  view = "reported",
+  cache_dir = farm_cache
+)
+```
+
+The result is a `farm_productivity_data` tibble (also inheriting from
+`agau_data`). A compact view of the semantic fields is usually more useful
+than printing the complete provenance payload:
+
+```{r farm-preview}
+productivity[
+  seq_len(min(8L, nrow(productivity))),
+  c(
+    "table_id", "table_title", "commodity", "geography", "period",
+    "period_status", "method", "unit", "value"
+  )
+]
+```
+
+Every row also carries `release_id`, `source_sheet`, `source_note`, `sha256`,
+`parser_version`, `observation_key`, and the shared observation-contract
+fields. For a local file, `release_id` is checksum-qualified unless an
+explicit `release_id` and `release_date` are supplied. The file name and file
+modification time are not treated as official release identity.
+
+## Method profiles and filters
+
+The `method` column separates conventional, climate-adjusted, and interim
+adjustment observations. The interim label is retained when it is present in
+the source; `adjustment = "all"` is the way to inspect the complete profile.
+The reader also accepts `"conventional"` and `"climate_adjusted"` as method
+filters, plus optional `industries` and `geography` filters.
+
+```{r method-profile}
+method_profile <- as.data.frame(
+  table(productivity$method, useNA = "ifany"),
+  stringsAsFactors = FALSE
+)
+names(method_profile) <- c("method", "observations")
+method_profile
+```
+
+For a focused method view, the same local source can be read again with a
+filter. This is still an offline parse; the cached workbook bytes are reused.
+
+```{r conventional-filter}
+conventional <- read_farm_productivity(
+  release = farm_file,
+  adjustment = "conventional",
+  view = "reported",
+  cache_dir = farm_cache
+)
+
+conventional[
+  seq_len(min(6L, nrow(conventional))),
+  c("table_id", "commodity", "geography", "period", "method", "value")
+]
+```
+
+## Financial-year semantics
+
+Simple financial-year labels are normalised to inclusive dates. For example,
+`1999-00` and `1999-2000` both describe `1999-07-01` through `2000-06-30`.
+Malformed ranges fail closed; named or multi-year summary labels remain
+undated rather than being guessed. Inspect both the source label and the
+normalised bounds when joining to another time series.
+
+```{r period-bounds}
+period_view <- productivity[
+  !is.na(productivity$period_start),
+  c(
+    "table_id", "period", "period_start", "period_end", "period_basis",
+    "method"
+  )
+]
+period_view
+```
+
+The parser records `period_status` separately from the date bounds. A period
+can therefore be dated without being silently reclassified as an estimate or
+forecast.
+
+## Provenance, failures, and live data
+
+`source_note`, `source_provider`, `rights_status`, `sha256`, and
+`retrieved_at` are provenance fields, not replacements for source attribution.
+The fixture above is safe for reproducible examples; it should not be quoted
+as an official estimate. For an official release, pass the exact local asset
+or an exact release ID and retain the returned hash.
+
+Passing a workbook from another product is a typed failure rather than an
+attempt to guess a table profile. The following uses another packaged fixture
+only to demonstrate the failure contract:
+
+```{r typed-failure}
+wrong_product_file <- system.file(
+  "fixtures", "workbooks", "crop-national.xlsx", package = "readagau"
+)
+failure <- tryCatch(
+  read_farm_productivity(wrong_product_file, cache_dir = farm_cache),
+  error = function(e) {
+    list(class = class(e)[1L], message = conditionMessage(e))
+  }
+)
+failure
+```
+
+The first class is an `agau_*` condition (normally
+`agau_validation_error` for an incompatible workbook). Code that needs to
+recover should branch on the condition class, not on a translated message.
+
+The package can discover current official assets when `release = "latest"`
+or when a reader is called without a local path, but that path needs network
+access and may change as the publisher updates its landing page. Keep live
+examples opt-in and use a managed cache. The guard below is intentionally off
+for CRAN and ordinary vignette builds; set `READAGAU_RUN_LIVE=true` in an
+interactive session only after checking the source's current terms.
+
+```{r live-productivity, eval=TRUE}
+if (interactive() && identical(Sys.getenv("READAGAU_RUN_LIVE"), "true")) {
+  live_productivity <- read_farm_productivity(
+    release = "latest",
+    view = "canonical",
+    cache_dir = farm_cache
+  )
+  utils::head(live_productivity)
+}
+```
+
+The offline fixture path above is the supported reproducible workflow for
+tests, package checks, and documentation. Network failures, changed source
+schemas, and missing assets should be handled as explicit package conditions
+and investigated with the returned release and asset metadata.

@@ -1,0 +1,28 @@
+Synthetic fixture only - package-owned reduced profile
+No. 20/2018 17 May 2018
+The following rows contain synthetic values for parser contract tests.
+Indicator  Week average  Unit  Latest  Previous Week  Weekly change  Price 12 months ago  Annual change
+AUD/USD exchange rate [Synthetic fixture]                                                                                 16-May    A$/US$              101       191        1%       151        5%
+Wheat - US no. 2 hard red winter wheat FOB Gulf [Synthetic fixture]                                                       16-May    US$/t               321       192       -1%       152        5%
+Corn - US no. 2 yellow corn FOB Gulf [Synthetic fixture]                                                                  16-May    US$/t               203       193        1%       153       -2%
+Canola - Rapeseed, Canada, FOB Vancouver [Synthetic fixture]                                                              16-May    US$/t               204       194       -1%       154        5%
+Cotton - Cotlook A Index [Synthetic fixture]                                                                              16-May    USc/lb              205       195        1%       155        5%
+Sugar - Intercontinental Exchange, nearby futures, no. 11 contract [Synthetic fixture]                                    16-May    USc/lb              206       196       -1%       156       -2%
+Wool - Eastern Market Indicator [Synthetic fixture]                                                                       16-May    Ac/kg clean         207       197        1%       157        5%
+Wool - Western Market Indicator [Synthetic fixture]                                                                       16-May    Ac/kg clean         208       198       -1%       158        5%
+Australian Premium White (APW) Wheat, FOB Port Adelaide [Synthetic fixture]                                               16-May    A$/t                209       199        1%       159       -2%
+Australian Standard White (ASW) Wheat, FOB Port Adelaide [Synthetic fixture]                                              16-May    A$/t                210       200       -1%       160        5%
+Feed barley [Synthetic fixture]                                                                                           16-May    A$/t                211       201        1%       161        5%
+Canola - FOB Kwinana [Synthetic fixture]                                                                                  16-May    A$/t                212       202       -1%       162       -2%
+Grain sorghum [Synthetic fixture]                                                                                         16-May    A$/t                213       203        1%       163        5%
+Beef - young cattle indicator [Synthetic fixture]                                                                         16-May    Ac/kg cwt           214       204       -1%       164        5%
+Mutton indicator [Synthetic fixture]                                                                                      16-May    Ac/kg cwt           215       205        1%       165       -2%
+Lamb - National Trade Lamb Indicator [Synthetic fixture]                                                                  16-May    Ac/kg cwt           216       206       -1%       166        5%
+Pig buyer price [Synthetic fixture]                                                                                       16-May    Ac/kg cwt           217       207        1%       167        5%
+Live cattle to Indonesia [Synthetic fixture]                                                                              16-May    Ac/kg lwt           218       208       -1%       168       -2%
+Dairy - whole milk powder [Synthetic fixture]                                                                             16-May    US$/t               219       209        1%       169        5%
+Dairy - skim milk powder [Synthetic fixture]                                                                              16-May    US$/t               220       210       -1%       170        5%
+Dairy - cheddar cheese [Synthetic fixture]                                                                                16-May    US$/t               221       211        1%       171       -2%
+Dairy - anhydrous milk fat [Synthetic fixture]                                                                            16-May    US$/t               222       212       -1%       172        5%
+Goats - synthetic indicator [Synthetic fixture]                                                                           16-May    Ac/kg cwt           234       224       -1%       184        5%
+Live sheep export indicator [Synthetic fixture]                                                                           16-May    Ac/kg cwt           235                  1%       185        5%

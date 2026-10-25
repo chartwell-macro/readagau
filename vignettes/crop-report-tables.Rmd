@@ -1,0 +1,233 @@
+---
+title: "Read and compare Crop Report tables"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Read and compare Crop Report tables}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The Crop Report reader turns national and state workbooks into semantic
+observations. This article is for users who need to choose a workbook role,
+inspect source-reported rows, and then apply the package's canonical
+precedence policy. The examples use the package's small, package-owned
+synthetic workbook fixtures. They exercise real parser paths, but their
+values are not official ABARES observations.
+
+## Read a national workbook offline
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE
+)
+
+library(readagau)
+
+fixture <- function(...) {
+  path <- system.file("fixtures", ..., package = "readagau")
+  stopifnot(nzchar(path))
+  path
+}
+
+national_path <- fixture("workbooks", "crop-national.xlsx")
+state_path <- fixture("workbooks", "crop-state.xlsx")
+cache_dir <- file.path(tempdir(), paste0("readagau-crop-vignette-", Sys.getpid()))
+dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+Pass a named local path when the role is known. `assets = "national"`
+prevents the reader from inferring a second workbook role, and a temporary
+cache keeps this reproducible example out of the user's project and home
+directories.
+
+```{r national-reported}
+national_reported <- read_crop_report(
+  c(national = national_path),
+  assets = "national",
+  view = "reported",
+  cache_dir = cache_dir
+)
+
+validation <- validate_agau_release(national_reported)
+stopifnot(
+  inherits(national_reported, "crop_report_data"),
+  "agau_data" %in% class(national_reported),
+  isTRUE(validation$valid)
+)
+
+data.frame(
+  class = class(national_reported)[1L],
+  observations = nrow(national_reported),
+  tables = length(unique(national_reported$table_id)),
+  valid = validation$valid
+)
+```
+
+The main reader returns a tibble with the product-specific
+`crop_report_data` class and the shared `agau_data` class. Each row retains
+semantic dimensions (`table_id`, `geography`, `commodity`, `concept`, and
+`period`) alongside values and provenance. A compact view of the contract is:
+
+```{r national-contract}
+knitr::kable(utils::head(
+  national_reported[c(
+    "table_id", "table_title", "geography", "commodity", "concept",
+    "period", "period_status", "unit", "value", "raw_value"
+  )],
+  6L
+))
+```
+
+## Local identity and provenance
+
+When no official identity is supplied, a local file receives a
+checksum-qualified identity. The package does not infer an official release
+from a filename or modification time. This is the safe default for a local
+workbook:
+
+```{r local-identity}
+release_identity <- data.frame(
+  release_id = unique(national_reported$release_id),
+  release_date = as.character(unique(national_reported$release_date)),
+  source_asset = unique(national_reported$source_asset),
+  sha256 = unique(national_reported$sha256),
+  parser_version = unique(national_reported$parser_version),
+  row.names = NULL
+)
+stopifnot(
+  nrow(release_identity) == 1L,
+  startsWith(release_identity$release_id, "local-"),
+  is.na(national_reported$release_date[1L]),
+  grepl("^[a-f0-9]{64}$", release_identity$sha256)
+)
+knitr::kable(release_identity)
+```
+
+For a reviewed official local copy, supply both `release_id` and
+`release_date`; supplying only one is rejected. Keep the source hash and
+parser version with downstream results so that a later source or parser change
+can be audited.
+
+## Reported versus canonical rows
+
+`view = "reported"` preserves every admitted source row. `view =
+"canonical"` applies the versioned precedence policy and marks the retained
+rows with `record_role = "canonical"`. Canonicalisation does not discard
+semantic dimensions in order to force unrelated rows together; an ambiguous
+equal-priority collision raises a typed validation error.
+
+```{r crop-views}
+national_canonical <- read_crop_report(
+  c(national = national_path),
+  assets = "national",
+  view = "canonical",
+  cache_dir = cache_dir
+)
+stopifnot(
+  inherits(national_canonical, "crop_report_data"),
+  all(national_canonical$record_role == "canonical")
+)
+
+data.frame(
+  view = c("reported", "canonical"),
+  observations = c(nrow(national_reported), nrow(national_canonical)),
+  tables = c(
+    length(unique(national_reported$table_id)),
+    length(unique(national_canonical$table_id))
+  )
+)
+```
+
+Use the reported view for source audits and the canonical view when a
+downstream analysis needs one selected observation per semantic key. Inspect
+the same fields in either view:
+
+```{r canonical-preview}
+knitr::kable(utils::head(
+  national_canonical[c(
+    "table_id", "geography", "commodity", "concept", "period",
+    "period_status", "value", "record_role"
+  )],
+  6L
+))
+```
+
+## Add the state workbook
+
+The state workbook has its own physical dataset and geography dimension. Read
+it separately when you need state detail; do not assume that a national sheet
+is a substitute for a state sheet.
+
+```{r state-workbook}
+state <- read_crop_report(
+  c(state = state_path),
+  assets = "state",
+  view = "canonical",
+  cache_dir = cache_dir
+)
+stopifnot(
+  inherits(state, "crop_report_data"),
+  all(state$source_dataset == "crop_report_state")
+)
+
+state_preview <- state[
+  state$geography == "Australia" & state$commodity == "Wheat",
+  c("table_id", "geography", "commodity", "concept", "period", "value"),
+  drop = FALSE
+]
+knitr::kable(utils::head(state_preview, 6L))
+```
+
+## Discover table families without parsing a release
+
+The checked-in source catalogue describes admitted table families and parser
+profiles. It is metadata about the source model, not a substitute for reading
+the workbook.
+
+```{r table-catalogue}
+catalogue <- agau_source_catalog()
+crop_tables <- catalogue[
+  catalogue$product == "crop_report" &
+    catalogue$dataset == "crop_report_national",
+  c("table_id", "source_label", "semantic_family", "parser_family",
+    "admission_status"),
+  drop = FALSE
+]
+knitr::kable(utils::head(crop_tables, 8L))
+```
+
+Period-status suffixes are explicit. For example, `s`, `f`, and `z` retain
+estimate, forecast, and projection status while an unsuffixed period remains
+`published-unclassified`:
+
+```{r status-contract}
+knitr::kable(agau_status(c("2025-26s", "2026-27f", "2030-31z", "2024-25")))
+```
+
+## Working with live releases
+
+The local examples above are deliberately offline. For an online workflow,
+use an exact supported release ID from `list_agau_releases()` and let
+`read_crop_report()` download and cache its selected asset. `"latest"` is
+convenient for exploration but is not a reproducible analysis identifier.
+Network access is not required when a complete exact cache hit or a local path
+is available.
+
+```{r release-list, eval = TRUE}
+releases <- list_agau_releases(
+  products = "crop_report",
+  refresh = FALSE,
+  cache_dir = cache_dir
+)
+knitr::kable(releases[seq_len(min(6L, nrow(releases))), c(
+  "release_id", "release_date", "support_status", "unsupported_reason"
+)])
+```
+
+When publishing results, retain the release ID, source URL, SHA-256,
+`parser_version`, and the relevant attribution guidance. Package code and
+package-owned synthetic fixtures are licensed under MIT, copyright Chartwell Macro;
+upstream source data, marks, excluded government material, and third-party
+content retain their own terms.

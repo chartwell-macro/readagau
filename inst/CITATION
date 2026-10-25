@@ -1,0 +1,10 @@
+citHeader("To cite readagau in publications, use:")
+
+bibentry(
+  bibtype = "Manual",
+  title = "readagau: Reproducible Australian Agricultural Data",
+  author = person("Chartwell", "Macro"),
+  year = "2026",
+  note = paste("R package version", meta$Version),
+  url = "https://chartwell-macro.github.io/readagau/"
+)

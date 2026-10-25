@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+title: "readagau: Reproducible Australian Agricultural Data"
+type: software
+abstract: >
+  Provides reproducible access to versioned Australian agricultural
+  time-series releases. The package discovers release metadata, reads local
+  or cached source assets, returns tidy observations with provenance, and
+  supports validation and forecast-vintage comparisons.
+authors:
+  - family-names: "Macro"
+    given-names: "Chartwell"
+repository-code: "https://github.com/chartwell-macro/readagau"
+url: "https://chartwell-macro.github.io/readagau/"
+license: MIT
+version: "0.1.0"
+keywords:
+  - Australia
+  - agriculture
+  - reproducible research
+  - time series
+message: >
+  Package code and package-owned synthetic fixtures are licensed under MIT,
+  copyright Chartwell Macro. Upstream data, source reports, names, and other provider
+  materials remain subject to their respective terms; package attribution
+  documents those sources and does not assign their ownership to the package
+  author.

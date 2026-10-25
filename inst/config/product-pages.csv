@@ -1,0 +1,5 @@
+product,landing_url,refresh_supported
+crop_report,https://www.agriculture.gov.au/abares/research-topics/agricultural-outlook/australian-crop-report,true
+agricultural_commodities,https://www.agriculture.gov.au/abares/research-topics/agricultural-outlook,true
+farm_productivity,https://www.agriculture.gov.au/abares/research-topics/productivity/agricultural-productivity-estimates,true
+weekly_commodity_prices,https://www.agriculture.gov.au/abares/data/weekly-commodity-price-update,TRUE

@@ -1,0 +1,192 @@
+---
+title: "Weekly commodity prices: snapshots, charts, and archives"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Weekly commodity prices: snapshots, charts, and archives}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`read_agau_prices()` is for workflows that need a dated Weekly commodity
+price snapshot while retaining the table or chart series, published unit,
+provider, and source hash. It can parse the current HTML table and accessible
+charts, an exact historical HTML/PDF/Word/text snapshot, or a quarterly ZIP
+containing supported assets.
+
+The examples below are fully offline. The files under
+`inst/fixtures/html`, `inst/fixtures/text`, and `inst/fixtures/pdf` are
+package-owned synthetic fixtures designed to exercise parser profiles. They
+are not official price observations, even when their column names or source
+provider labels resemble the upstream publication. Live source URLs in the
+catalogue are metadata for discovery and attribution, not bundled source
+values.
+
+## Parse the current table and chart profile
+
+The current profile is split across one table page and three pages containing
+accessible chart descriptions. Supplying the local paths together lets the
+same reader exercise both branches without network access.
+
+```{r setup}
+library(readagau)
+
+fixture_root <- system.file("fixtures", package = "readagau")
+weekly_html <- file.path(
+  fixture_root,
+  "html",
+  c(
+    "weekly-prices-current.html",
+    "weekly-world-charts.html",
+    "weekly-australian-charts.html",
+    "weekly-horticulture-charts.html"
+  )
+)
+stopifnot(all(file.exists(weekly_html)))
+
+weekly_cache <- tempfile("readagau-weekly-prices-")
+dir.create(weekly_cache)
+
+current <- read_agau_prices(
+  snapshot = weekly_html,
+  series = c("A2", "H1"),
+  measures = c("latest_price", "annual_change"),
+  cache_dir = weekly_cache
+)
+```
+
+`series` accepts canonical IDs such as `A2` (a world series) and `H1` (a
+horticulture series). The current table contributes its published measures;
+the chart pages contribute dated `latest_price` observations. A small view
+keeps the distinction visible:
+
+```{r current-preview}
+current[
+  , c(
+    "release_date", "table_id", "record_role", "period",
+    "observation_date", "value", "unit", "source_asset"
+  )
+]
+```
+
+The returned object has class `agau_weekly_prices` (and `agau_data`). Its
+common observation contract includes `product`, `release_id`, `release_date`,
+`table_id`, `record_role`, `period`, `period_start`, `period_end`,
+`period_status`, `unit`, `value`, `raw_value`, `missing_reason`,
+`observation_key`, `source_provider`, `rights_status`, `sha256`, and
+`parser_version`. `observation_date` records the date stated by an
+accessible chart when it differs from the release date; `snapshot_date`
+records the dated snapshot context.
+
+The full semantic registry can be inspected without parsing a source:
+
+```{r series-catalogue}
+weekly_series <- agau_series_catalog("weekly_commodity_prices")
+weekly_series[
+  weekly_series$source_series_id %in% c("A2", "H1"),
+  c("source_series_id", "indicator", "commodity", "market", "source_provider")
+]
+```
+
+## Read an exact historical snapshot
+
+Exact local paths are preferable for reproducible analyses. A text extract is
+one supported historical profile; the result retains the report date and the
+asset name rather than inferring identity from a renamed file.
+
+```{r exact-text}
+historical_file <- file.path(
+  fixture_root, "text", "weekly-2025-07-10.txt"
+)
+historical <- read_agau_prices(
+  snapshot = historical_file,
+  series = "A2",
+  measures = c("latest_price", "annual_change"),
+  cache_dir = weekly_cache
+)
+historical[
+  , c(
+    "release_id", "release_date", "table_id", "record_role",
+    "period", "value", "unit", "source_provider", "sha256"
+  )
+]
+```
+
+The same API accepts a vector of exact paths, including an HTML page, a text
+extract, a Word document, or a supported ZIP. `snapshot = "all"` is a
+catalogue-driven operation and therefore requires the official archive
+assets; it is intentionally not used in the deterministic example above.
+
+## Optional PDF parsing
+
+PDF parsing uses the external `pdftotext` executable supplied by Poppler. The
+dependency is optional for non-PDF workflows: a missing executable should be
+reported to the user and does not prevent the HTML or text readers from being
+used. This chunk runs only when both a packaged PDF fixture and Poppler are
+available, so a CRAN check on a platform without Poppler remains deterministic.
+
+```{r optional-pdf}
+pdf_file <- file.path(fixture_root, "pdf", "weekly-2016-10-13.pdf")
+pdf_ready <- file.exists(pdf_file) && nzchar(Sys.which("pdftotext"))
+
+pdf_preview <- if (pdf_ready) {
+  pdf_data <- read_agau_prices(
+    snapshot = pdf_file,
+    series = "A2",
+    measures = c("latest_price", "annual_change"),
+    cache_dir = weekly_cache
+  )
+  pdf_data[
+    , c("release_date", "table_id", "record_role", "value", "unit")
+  ]
+} else {
+  data.frame(
+    status = "PDF example skipped: packaged PDF or pdftotext is unavailable",
+    stringsAsFactors = FALSE
+  )
+}
+pdf_preview
+```
+
+## Typed failures, cache, and live calls
+
+Unknown or unsupported snapshot IDs produce an `agau_asset_missing_error`
+rather than a partially parsed result. This is useful in scheduled jobs,
+where a missing archive should be retried or escalated explicitly.
+
+```{r typed-failure}
+missing_snapshot <- tryCatch(
+  read_agau_prices(
+    snapshot = "synthetic-release-not-in-catalogue",
+    cache_dir = weekly_cache
+  ),
+  agau_asset_missing_error = function(e) e
+)
+stopifnot(inherits(missing_snapshot, "agau_asset_missing_error"))
+missing_snapshot
+```
+
+For live calls, `snapshot = "latest"` discovers the current landing page and
+then caches immutable raw assets under `cache_dir`; `refresh = TRUE` is an
+explicit request to refresh discovery and bytes. Choose a cache below
+`tempdir()` for examples and tests, or `agau_cache_dir()` for a user-managed
+application cache. Live calls can change as the publisher updates its page,
+and upstream providers may have their own terms and availability.
+
+The live path is deliberately opt-in. It is not evaluated during ordinary
+non-interactive vignette or CRAN builds, and it should only be enabled after
+checking network access and current source terms:
+
+```{r live-weekly, eval=TRUE}
+if (interactive() && identical(Sys.getenv("READAGAU_RUN_LIVE"), "true")) {
+  live_weekly <- read_agau_prices(
+    snapshot = "latest",
+    include_charts = FALSE,
+    cache_dir = weekly_cache
+  )
+  utils::head(live_weekly)
+}
+```
+
+The offline fixtures above are the reproducible path for examples, tests, and
+package checks; they intentionally do not make claims about the current
+official prices.

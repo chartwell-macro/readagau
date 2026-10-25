@@ -1,0 +1,45 @@
+Package: readagau
+Type: Package
+Title: Reproducible Australian Agricultural Data
+Version: 0.1.0
+Authors@R: person(given = "Chartwell", family = "Macro",
+    role = c("aut", "cre", "cph"),
+    email = "chartwellmacro@gmail.com")
+Description: Discovers, caches, parses and compares versioned Australian
+ agricultural time-series releases published by the Australian Bureau of
+ Agricultural and Resource Economics and Sciences (ABARES)
+ <https://www.agriculture.gov.au/abares>. It is intended
+ for analysts and researchers who need reproducible local workflows: source
+ assets can be read from local paths or downloaded to a managed cache, and
+ returned tibbles retain release, table, provider, source URL, content-hash,
+ and parser-version provenance. Readers can inspect catalogues, validate
+ observation contracts, and compare forecast vintages and revisions. Support
+ is limited to the documented release catalogue and source formats; network
+ access and Poppler are optional and are required only for workflows that use
+ remote sources or PDF reports.
+License: MIT + file LICENSE
+Depends:
+    R (>= 4.1.0)
+SystemRequirements: Poppler (pdftotext), required only for PDF input
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    digest,
+    httr2,
+    readxl,
+    rvest,
+    tibble,
+    xml2
+Suggests:
+    ggplot2,
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    withr
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/Needs/website: r-lib/pkgdown
+URL: https://chartwell-macro.github.io/readagau/,
+    https://github.com/chartwell-macro/readagau
+BugReports: mailto:chartwellmacro@gmail.com

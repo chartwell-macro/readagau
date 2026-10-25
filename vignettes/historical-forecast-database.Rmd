@@ -1,0 +1,148 @@
+---
+title: "Historical Agricultural Forecast Database"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Historical Agricultural Forecast Database}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The Historical Agricultural Forecast Database (HAFD) records what was
+forecast, when it was issued, and the later actual used for comparison.
+`read_agau_forecast_history()` normalises its CSV or workbook schema while
+retaining source identity and a SHA-256 hash for the exact bytes read.
+
+The two files used below are small package-owned synthetic fixtures. They
+exercise the CSV and workbook fingerprints without redistributing an official
+database or asserting that the example values are current.
+
+## Read CSV and workbook inputs
+
+Start with an explicit local path for a deterministic, offline workflow. A
+temporary cache keeps any parser metadata out of the home directory.
+
+```{r setup}
+library(readagau)
+
+fixture_root <- system.file("fixtures", package = "readagau")
+csv_file <- file.path(fixture_root, "workbooks", "historical-forecast.csv")
+xlsx_file <- file.path(fixture_root, "workbooks", "historical-forecast.xlsx")
+stopifnot(file.exists(csv_file), file.exists(xlsx_file))
+
+hafd_cache <- tempfile("readagau-hafd-")
+dir.create(hafd_cache)
+
+hafd_csv <- read_agau_forecast_history(csv_file, cache_dir = hafd_cache)
+hafd_xlsx <- read_agau_forecast_history(xlsx_file, cache_dir = hafd_cache)
+```
+
+Both paths produce an `agau_forecast_history` tibble. The parser chooses the
+single workbook sheet with the required field fingerprint; it does not guess
+from a sheet position. CSV and workbook inputs share the same semantic
+columns, while their `sha256` values correctly differ because the source bytes
+are different.
+
+```{r hafd-preview}
+hafd_csv[
+  , c(
+    "commodity", "estimate_type", "unit", "region", "year_issued",
+    "month_issued", "year_issued_fy", "forecast_year_fy",
+    "original_forecast", "latest_actual"
+  )
+]
+```
+
+## Output contract and missing values
+
+The result has 15 columns: commodity and estimate descriptors; issue year and
+month; issue and forecast financial years; numeric `original_forecast` and
+`latest_actual`; and `release_id`, `source_url`, `retrieved_at`, and `sha256`.
+Year fields are integer where they represent a year, forecasts are doubles,
+and published missing markers such as `..` become `NA` rather than zero.
+
+```{r hafd-provenance}
+hafd_csv[
+  , c("release_id", "source_url", "retrieved_at", "sha256")
+]
+```
+
+The local example uses `release_id = "historical-forecast-local"` and has no
+official URL. When a release is discovered from a landing page, the returned
+`release_id`, `source_url`, retrieval time, and content hash identify the
+asset that was actually parsed.
+
+## Discovery and cache replay
+
+The package can discover the HAFD workbook from its landing page when
+`path = NULL`. To keep this vignette offline, the option below points to the
+small packaged landing-page fixture; its relative workbook link resolves to
+the packaged synthetic workbook. The same reader call and cache machinery are
+used for an official landing page, but an official call requires network
+access and should be made only when the source is available and its terms have
+been checked.
+
+```{r local-discovery}
+landing_fixture <- file.path(fixture_root, "html", "historical-forecasts.html")
+withr::local_options(list(readagau.hafd_landing_url = landing_fixture))
+
+discovered <- read_agau_forecast_history(
+  path = NULL,
+  cache_dir = hafd_cache
+)
+discovered[
+  , c("release_id", "source_url", "original_forecast", "sha256")
+]
+```
+
+With `refresh = FALSE`, an existing valid cached asset is replayed without
+re-fetching the landing page or downloading the workbook. Use `refresh = TRUE`
+only when an intentional source refresh is required; retain the resulting
+hash and release metadata with downstream outputs.
+
+## Typed schema failures
+
+Malformed numeric fields are rejected with a typed `agau_schema_error`. This
+example writes a one-off malformed copy below `tempdir()` solely to show the
+failure contract; it does not alter the packaged fixture.
+
+```{r typed-failure}
+malformed <- utils::read.csv(
+  csv_file, check.names = FALSE, stringsAsFactors = FALSE
+)
+malformed$original_forecast <- "not a published missing marker"
+malformed_file <- tempfile("readagau-hafd-malformed-", fileext = ".csv")
+utils::write.csv(malformed, malformed_file, row.names = FALSE)
+
+failure <- tryCatch(
+  read_agau_forecast_history(malformed_file, cache_dir = hafd_cache),
+  agau_schema_error = function(e) e
+)
+stopifnot(inherits(failure, "agau_schema_error"))
+failure
+```
+
+Downstream code should branch on the `agau_schema_error` or
+`agau_asset_missing_error` class and preserve the diagnostic fields, rather
+than treating a malformed source as an empty forecast history.
+
+## Optional live discovery
+
+The live path is deliberately guarded so that normal vignette and CRAN builds
+remain deterministic and network-free. Set `READAGAU_RUN_LIVE=true` in an
+interactive session only after confirming network access and the publisher's
+current attribution and redistribution terms. Use a managed cache and record
+the returned `sha256` when using live data.
+
+```{r live-hafd, eval=TRUE}
+if (interactive() && identical(Sys.getenv("READAGAU_RUN_LIVE"), "true")) {
+  live_hafd <- read_agau_forecast_history(
+    path = NULL,
+    refresh = TRUE,
+    cache_dir = hafd_cache
+  )
+  utils::head(live_hafd)
+}
+```
+
+For reproducible package examples, tests, and analyses, use an explicit local
+asset such as the packaged CSV or workbook and keep its hash with the output.

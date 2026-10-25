@@ -1,0 +1,229 @@
+---
+title: "Comparing revisions and forecast errors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Comparing revisions and forecast errors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`readagau` compares vintages by semantic `observation_key`, not by row
+position. This vignette builds a four-release sequence from the package's
+small synthetic Crop Report workbook, then changes only release metadata,
+status, and values. Every operation is therefore deterministic and offline;
+the numbers below are demonstration values, not official estimates.
+
+## Build an exact, semantic vintage sequence
+
+The package readers supply the full observation schema (period, unit, basis,
+geography, series identity, source sheet, and hash). We retain one Australian
+Wheat production observation and make three forecasts followed by an estimate:
+
+```{r build-vintages}
+library(readagau)
+library(knitr)
+
+cache_dir <- tempfile("readagau-vintage-cache-", tmpdir = tempdir())
+dir.create(cache_dir, recursive = TRUE)
+state_path <- system.file(
+  "fixtures", "workbooks", "crop-state.xlsx", package = "readagau"
+)
+stopifnot(nzchar(state_path), file.exists(state_path))
+
+state <- read_crop_report(
+  c(state = state_path),
+  assets = "state",
+  view = "canonical",
+  cache_dir = cache_dir
+)
+base <- as.data.frame(state[
+  state$geography == "Australia" &
+    state$commodity == "Wheat" &
+    tolower(state$concept) == "production" &
+    state$period == "2025-26",
+  , drop = FALSE
+][1, , drop = FALSE])
+stopifnot(nrow(base) == 1L)
+
+release_ids <- c(
+  "acr-2025-06-03-no-214", "acr-2025-09-02-no-215",
+  "acr-2025-12-02-no-216", "acr-2026-03-03-no-217"
+)
+vintages <- base[rep(1L, 4L), , drop = FALSE]
+vintages$release_id <- release_ids
+vintages$release_date <- as.Date(c(
+  "2025-06-03", "2025-09-02", "2025-12-02", "2026-03-03"
+))
+vintages$period_status <- c("forecast", "forecast", "forecast", "estimate")
+vintages$status_source <- "synthetic vignette fixture"
+vintages$value <- c(30560, 33765, 35585, 35985)
+vintages$raw_value <- as.character(vintages$value)
+vintages$sha256 <- vapply(seq_len(4L), function(i) {
+  paste(rep(as.character(i), 64L), collapse = "")
+}, "")
+
+kable(data.frame(
+  release_id = vintages$release_id,
+  release_date = vintages$release_date,
+  period_status = vintages$period_status,
+  value = vintages$value,
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+The four rows share one semantic key. Their release IDs and dates order the
+vintages; they do not become part of the observation identity. A duplicate key
+within one release is rejected because it would make a revision ambiguous.
+
+## Forecast revisions
+
+`agau_forecast_revision()` compares adjacent forecast/projection values and also
+reports when the final forecast becomes an estimate or historical value. It
+provides both absolute and percentage revisions plus the issue-to-target
+horizon in months:
+
+```{r forecast-revisions}
+forecast_revisions <- agau_forecast_revision(vintages)
+forecast_display <- data.frame(
+  old_release = forecast_revisions$old_release,
+  new_release = forecast_revisions$new_release,
+  old_value = forecast_revisions$old_value,
+  new_value = forecast_revisions$new_value,
+  absolute_revision = forecast_revisions$absolute_revision,
+  percentage_revision = round(forecast_revisions$percentage_revision, 2),
+  old_horizon_months = forecast_revisions$old_issue_to_target_horizon_months,
+  new_horizon_months = forecast_revisions$new_issue_to_target_horizon_months,
+  status_transition = forecast_revisions$status_transition,
+  revision_number = forecast_revisions$revision_number,
+  stringsAsFactors = FALSE
+)
+kable(forecast_display, row.names = FALSE)
+```
+
+The sign convention is `new_value - old_value`: a positive number means the
+later vintage is larger. `revision_number` and `revision_count` are calculated
+within each semantic observation, so adding another series does not change the
+meaning of this result.
+
+## First and latest revised realisations
+
+To measure forecast error, append a later historical observation. With the
+default `realisation = "first"`, each forecast is compared with the first later
+estimate or historical value. `realisation = "latest_revised"` deliberately
+selects the last such value and labels the comparison separately:
+
+```{r forecast-errors}
+latest_observation <- vintages[4L, , drop = FALSE]
+latest_observation$release_id <- "acr-2026-06-02-no-218"
+latest_observation$release_date <- as.Date("2026-06-02")
+latest_observation$period_status <- "historical"
+latest_observation$status_source <- "synthetic vignette fixture"
+latest_observation$value <- 36010
+latest_observation$raw_value <- "36010"
+latest_observation$sha256 <- paste(rep("a", 64L), collapse = "")
+vintages_with_realisation <- rbind(vintages, latest_observation)
+
+first_error <- agau_forecast_error(
+  vintages_with_realisation,
+  realisation = "first"
+)
+latest_error <- agau_forecast_error(
+  vintages_with_realisation,
+  realisation = "latest_revised"
+)
+
+error_display <- rbind(
+  data.frame(
+    selection = first_error$realisation_selection,
+    forecast_release = first_error$old_release,
+    realisation_release = first_error$new_release,
+    forecast_value = first_error$old_value,
+    realised_value = first_error$new_value,
+    forecast_error = first_error$forecast_error,
+    stringsAsFactors = FALSE
+  ),
+  data.frame(
+    selection = latest_error$realisation_selection,
+    forecast_release = latest_error$old_release,
+    realisation_release = latest_error$new_release,
+    forecast_value = latest_error$old_value,
+    realised_value = latest_error$new_value,
+    forecast_error = latest_error$forecast_error,
+    stringsAsFactors = FALSE
+  )
+)
+kable(error_display, row.names = FALSE)
+```
+
+The error is also signed as `realised_value - forecast_value`; the percentage
+error is retained in the returned column `percentage_error`. Neither selection
+rewrites the source observations or silently replaces the first-realisation
+concept.
+
+Historical revisions are a separate operation. They compare two later
+non-forecast statuses, so the appended estimate-to-historical change is
+visible without being mislabelled as forecast error:
+
+```{r history-revisions}
+history_revisions <- agau_history_revision(vintages_with_realisation)
+kable(data.frame(
+  old_release = history_revisions$old_release,
+  new_release = history_revisions$new_release,
+  old_value = history_revisions$old_value,
+  new_value = history_revisions$new_value,
+  absolute_revision = history_revisions$absolute_revision,
+  comparison = history_revisions$comparison,
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+For a package-facing workflow, `compare_agau_vintages()` dispatches these same
+operations. Supplying parsed `data` keeps this example offline; supplying
+named local assets is also supported, while a loader-based comparison uses
+exact release IDs and the normal reader cache:
+
+```{r compare-all}
+all_comparisons <- compare_agau_vintages(
+  product = "crop_report",
+  data = vintages_with_realisation,
+  releases = vintages_with_realisation$release_id,
+  comparison = "all",
+  cache_dir = cache_dir
+)
+kable(data.frame(
+  comparison = names(all_comparisons),
+  rows = vapply(all_comparisons, nrow, integer(1)),
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+## Structural breaks fail closed
+
+A value change is not automatically a revision if the semantic basis changed.
+For example, changing the unit from `kt` to `tonnes` creates a structural
+break. `readagau` reports the changed metadata fields in a typed
+`agau_validation_error` instead of joining incompatible observations:
+
+```{r structural-break}
+broken <- vintages_with_realisation
+broken$unit[nrow(broken)] <- "tonnes"
+broken <- readagau:::agau_rekey_data(broken)
+break_condition <- tryCatch(
+  agau_forecast_revision(broken),
+  agau_validation_error = function(e) e
+)
+
+kable(data.frame(
+  class = class(break_condition)[1L],
+  message = conditionMessage(break_condition),
+  changed_fields = paste(
+    break_condition$structural_breaks$fields,
+    collapse = "; "
+  ),
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+When this occurs in a real series, review the source metadata and create a
+versioned concordance before comparing releases. Do not coerce units, markets,
+geographies, or period bases merely to make a join succeed.

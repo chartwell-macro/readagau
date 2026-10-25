@@ -1,0 +1,258 @@
+---
+title: "Cache, offline operation, and troubleshooting"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Cache, offline operation, and troubleshooting}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`readagau` is designed to make network retrieval explicit and parsing
+replayable. This article uses package-owned synthetic fixtures and a temporary
+cache, so its executable path is offline and does not write to a home
+directory. A guarded live example appears at the end for maintainers who
+choose to opt in deliberately.
+
+## Start with a managed, writable cache
+
+The default `agau_cache_dir()` uses `tools::R_user_dir("readagau", "cache")`.
+It is separate from the project working tree. For tests, vignettes, and
+reproducible pipelines, an explicit temporary or project cache is easier to
+inspect and clean:
+
+```{r offline-setup}
+library(readagau)
+library(knitr)
+
+cache_dir <- tempfile("readagau-troubleshooting-cache-", tmpdir = tempdir())
+dir.create(cache_dir, recursive = TRUE)
+fixture <- system.file(
+  "fixtures", "workbooks", "crop-state.xlsx", package = "readagau"
+)
+stopifnot(nzchar(fixture), file.exists(fixture))
+
+offline <- read_crop_report(
+  c(state = fixture),
+  assets = "state",
+  view = "reported",
+  cache_dir = cache_dir
+)
+
+kable(data.frame(
+  rows = nrow(offline),
+  identity = unique(offline$release_id),
+  release_date = as.character(unique(offline$release_date)),
+  cache_is_writable = file.access(cache_dir, 2L) == 0L,
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+Local paths are parsed without network access. Because no official release
+metadata was supplied, the identity is checksum-qualified and the date is
+`NA`. Use `release_id` and `release_date` together only after matching a
+local file to a reviewed release. Never put credentials in a source URL or
+commit a credential-bearing cache.
+
+## What is cached and how replay works
+
+Raw bytes are promoted atomically to
+`raw/<product>/<release_id>/<sha256>/<asset>`. The corresponding manifest
+records the exact URL, source filename, byte format, retrieval headers, size,
+hash, local path, and validation status. Parsed observations are cached under a
+separate key that includes the source hash and parser profile. `refresh = TRUE`
+may discover a new page or byte sequence, but it does not overwrite an older
+hash-addressed object; `refresh = FALSE` reuses a valid exact cache entry.
+
+The cache writer below is internal only because it lets this vignette seed a
+cache from a packaged fixture. The public `download_agau_release()` call then
+replays the exact asset without contacting the source:
+
+```{r cache-replay}
+release_id <- "acr-2026-06-02-no-218"
+manifest <- readagau:::agau_cache_asset(
+  product = "crop_report",
+  release_id = release_id,
+  asset_type = "state",
+  source_url = fixture,
+  cache_dir = cache_dir
+)
+replayed <- download_agau_release(
+  product = "crop_report",
+  release = release_id,
+  assets = "state",
+  cache_dir = cache_dir
+)
+
+kable(data.frame(
+  raw_path_contains_hash = identical(
+    manifest$sha256, basename(dirname(manifest$local_path))
+  ),
+  replay_same_sha256 = identical(manifest$sha256, replayed$sha256[[1]]),
+  replay_detected_format = replayed$detected_format[[1]],
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+This is also why a cache directory should be backed up as evidence, not
+treated as a mutable download folder. Keep the manifest and the source hash
+with any published result. Automatic pruning is not performed by the package.
+
+## Offline, network, and credentials
+
+Use one of these approaches when a job must be reproducible or run without a
+network:
+
+* pass a local HTML, text, PDF, Word, or workbook path to the relevant reader;
+* resolve an exact release once, retain its manifest and raw bytes, and replay
+  it with `refresh = FALSE`; or
+* use the small packaged fixtures in tests and vignettes.
+
+The `latest` selector and `refresh = TRUE` are intentionally online-capable
+operations. They should be kept out of ordinary test code and out of CRAN
+examples. Network retrieval uses HTTPS, bounded request timeouts, and retries;
+an unavailable endpoint is reported as a typed package condition rather than
+silently returning a partial table.
+
+## Typed conditions are actionable
+
+Errors and warnings inherit from `condition` and carry a stable `agau_*`
+subclass plus contextual fields such as `product`, `release_id`,
+`asset_type`, and `remediation`. Catch the specific subclass when a
+workflow needs a recovery path:
+
+```{r typed-condition}
+missing_path <- file.path(cache_dir, "does-not-exist.xlsx")
+missing_condition <- tryCatch(
+  agau_detect_format(missing_path),
+  agau_asset_missing_error = function(e) e
+)
+
+bad_path <- file.path(cache_dir, "html-disguised-as-workbook.xlsx")
+writeLines(c(
+  "<!doctype html>",
+  "<html><body>Synthetic error fixture</body></html>"
+), bad_path)
+format_condition <- tryCatch(
+  read_crop_report(
+    c(national = bad_path),
+    assets = "national",
+    cache_dir = cache_dir
+  ),
+  agau_asset_format_error = function(e) e
+)
+
+kable(data.frame(
+  class = c(class(missing_condition)[1L], class(format_condition)[1L]),
+  message = c(
+    conditionMessage(missing_condition),
+    conditionMessage(format_condition)
+  ),
+  remediation = c(
+    missing_condition$remediation,
+    format_condition$remediation
+  ),
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+The main condition families are:
+
+* `agau_release_discovery_error` for missing or ambiguous release metadata;
+* `agau_asset_missing_error` for absent or unsupported exact assets;
+* `agau_download_error` for retrieval or atomic-promotion failures;
+* `agau_asset_format_error` for bytes that do not match the requested role;
+* `agau_schema_error` and `agau_table_parse_error` for changed structure or
+  incomplete parsing;
+* `agau_dependency_error` for a required local executable such as Poppler;
+* `agau_endpoint_error` for source endpoints that cannot satisfy their
+  documented contract;
+* `agau_validation_error` for invalid semantic joins, cache state, or input
+  contracts; and
+* `agau_status_warning`, `agau_duplicate_warning`, and
+  `agau_cadence_warning` for non-fatal source-quality signals.
+
+Do not catch a broad `error` and continue with unlabelled data. Preserve the
+condition's message and remediation in logs, and inspect the raw hash before
+retrying.
+
+## Troubleshooting by failure mode
+
+### Network or changed landing page
+
+Use a local snapshot or an exact cached release to separate network problems
+from parser problems. If a live request fails, retry with the same exact ID and
+`refresh = FALSE` first. If the page or asset has changed, retain the old hash,
+then opt into `refresh = TRUE` and compare the new manifest. Avoid constructing
+URLs from filenames: release pages and asset links are discovered metadata.
+
+### Cache permissions and temporary files
+
+The cache directory must be writable by the current R process. Check it without
+changing permissions or deleting anything:
+
+```{r cache-permissions}
+kable(data.frame(
+  cache_dir = cache_dir,
+  exists = dir.exists(cache_dir),
+  writable = file.access(cache_dir, 2L) == 0L,
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+On a write, lock, staging, or atomic-rename failure, check free space,
+permissions, and whether another process has left a stale lock. The package
+uses `tempdir()` for transient downloads and staged writes; do not redirect it
+to a home or global workspace. Cache write failures are surfaced as
+`agau_download_error` or `agau_validation_error` with remediation text.
+
+### Poppler and PDF layout
+
+PDF-backed Weekly history requires the `pdftotext` executable from Poppler;
+workbook readers do not. Check availability before selecting a PDF path:
+
+```{r poppler-check}
+pdftotext <- Sys.which("pdftotext")
+kable(data.frame(
+  executable = "pdftotext",
+  available = nzchar(pdftotext),
+  path = if (nzchar(pdftotext)) pdftotext else "not on PATH",
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+If Poppler is absent, the PDF path reports `agau_dependency_error` with an
+installation remediation. If Poppler is present but text extraction fails,
+the parser reports `agau_table_parse_error`; retain the PDF hash and inspect
+the extracted text rather than silently substituting values. PDF parsing uses
+layout-preserving extraction because column spacing, headers, missing-value
+tokens, and report-era profiles are part of the parser contract.
+
+### HTML layout, chart descriptions, and schema drift
+
+HTML readers expect the documented table columns and, for current Weekly chart
+pages, dated accessible `alt` text. A publisher redesign can therefore cause
+`agau_schema_error` or `agau_table_parse_error` even when the page still opens
+in a browser. Save the exact page bytes, inspect its `sha256`, and report the
+release ID and asset role. Do not patch values in a cached file: a new byte
+sequence must get a new hash-addressed entry.
+
+## Optional live smoke test
+
+The following code is deliberately opt-in. It is not run during ordinary
+vignette builds or package checks; set `READAGAU_RUN_LIVE=true` only when network
+access is expected and the result is disposable:
+
+```{r live-smoke, results = 'asis'}
+if (interactive() && identical(Sys.getenv("READAGAU_RUN_LIVE"), "true")) {
+  live_cache <- tempfile("readagau-live-cache-", tmpdir = tempdir())
+  dir.create(live_cache, recursive = TRUE)
+  live <- list_agau_releases(
+    products = "crop_report",
+    refresh = TRUE,
+    cache_dir = live_cache
+  )
+  print(utils::head(live[, c("release_id", "release_date", "asset_status")]))
+} else {
+  cat("Live smoke test skipped; run interactively with READAGAU_RUN_LIVE=true to opt in.\\n")
+}
+```

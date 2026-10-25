@@ -1,0 +1,81 @@
+%PDF-1.4
+% synthetic fixture
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 1200 792] /Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>
+endobj
+4 0 obj
+<< /Length 2326 >>
+stream
+BT
+/F1 7 Tf
+28 760 Td
+(Synthetic fixture only - package-owned reduced PDF profile) Tj
+0 -14 Td
+(No. 1/2016 13 October 2016) Tj
+0 -14 Td
+(Indicator  Week average  Unit  Latest  Previous Week  Weekly change  Price 12 months ago  Annual change) Tj
+0 -14 Td
+(AUD/USD exchange rate [Synthetic fixture]  12-Oct  A$/US$  101  191  1%  151  5%) Tj
+0 -14 Td
+(Wheat - US no. 2 hard red winter wheat FOB Gulf [Synthetic fixture]  12-Oct  US$/t  321  192  -1%  152  5%) Tj
+0 -14 Td
+(Corn - US no. 2 yellow corn FOB Gulf [Synthetic fixture]  12-Oct  US$/t  203  193  1%  153  -2%) Tj
+0 -14 Td
+(Canola - Rapeseed, Canada, FOB Vancouver [Synthetic fixture]  12-Oct  US$/t  204  194  -1%  154  5%) Tj
+0 -14 Td
+(Cotton - Cotlook A Index [Synthetic fixture]  12-Oct  USc/lb  205  195  1%  155  5%) Tj
+0 -14 Td
+(Sugar - Intercontinental Exchange, nearby futures, no. 11 contract [Synthetic fixture]  12-Oct  USc/lb  206  196  -1%  156  -2%) Tj
+0 -14 Td
+(Wool - Eastern Market Indicator [Synthetic fixture]  12-Oct  Ac/kg clean  207  197  1%  157  5%) Tj
+0 -14 Td
+(Wool - Western Market Indicator [Synthetic fixture]  12-Oct  Ac/kg clean  208  198  -1%  158  5%) Tj
+0 -14 Td
+(Australian Premium White \(APW\) Wheat, FOB Port Adelaide [Synthetic fixture]  12-Oct  A$/t  209  199  1%  159  -2%) Tj
+0 -14 Td
+(Australian Standard White \(ASW\) Wheat, FOB Port Adelaide [Synthetic fixture]  12-Oct  A$/t  210  200  -1%  160  5%) Tj
+0 -14 Td
+(Feed barley [Synthetic fixture]  12-Oct  A$/t  211  201  1%  161  5%) Tj
+0 -14 Td
+(Canola - FOB Kwinana [Synthetic fixture]  12-Oct  A$/t  212  202  -1%  162  -2%) Tj
+0 -14 Td
+(Grain sorghum [Synthetic fixture]  12-Oct  A$/t  213  203  1%  163  5%) Tj
+0 -14 Td
+(Beef - young cattle indicator [Synthetic fixture]  12-Oct  Ac/kg cwt  214  204  -1%  164  5%) Tj
+0 -14 Td
+(Mutton indicator [Synthetic fixture]  12-Oct  Ac/kg cwt  215  205  1%  165  -2%) Tj
+0 -14 Td
+(Lamb - National Trade Lamb Indicator [Synthetic fixture]  12-Oct  Ac/kg cwt  216  206  -1%  166  5%) Tj
+0 -14 Td
+(Pig buyer price [Synthetic fixture]  12-Oct  Ac/kg cwt  217  207  1%  167  5%) Tj
+0 -14 Td
+(Goats - synthetic indicator [Synthetic fixture]  12-Oct  Ac/kg cwt  218  208  -1%  168  -2%) Tj
+0 -14 Td
+(Live sheep export indicator [Synthetic fixture]  12-Oct  Ac/kg cwt  219  209  1%  169  5%) Tj
+0 -14 Td
+(Synthetic fixture only) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000029 00000 n 
+0000000078 00000 n 
+0000000135 00000 n 
+0000000262 00000 n 
+0000002639 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+2707
+%%EOF

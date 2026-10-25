@@ -1,0 +1,13 @@
+parser_family,scope,network_allowed,selection_rule
+national_totals,Crop Report Tables 1 to 3,false,normalised title plus structural fingerprint
+current_state,Crop Report Tables 4 to 10,false,normalised title plus release profile
+national_history,Crop Report Tables 11 to 12,false,normalised title plus structural fingerprint
+recent_state,Crop Report Tables 13 to 14,false,normalised title plus structural fingerprint
+supply_disposal,Crop Report Tables 15 to 16,false,normalised title plus marketing-year structure
+prices,Crop Report Table 17,false,normalised title plus quarterly structure
+state_history,Australia and six state sheets,false,normalised compact or spaced geography plus structural fingerprint
+commodities_outlook,March and non-March outlook families,false,title aliases plus structural fingerprint
+commodity_statistics,Agricultural Commodity Statistics Tables 1 to 18 or legacy Tables 1 to 27,false,exact sheet-set profile plus title and hierarchical structural fingerprint
+farm_productivity,Conventional and climate-adjusted tables,false,title plus method and geography fingerprint
+historical_forecast,Historical Agricultural Forecast Database,false,reviewed read.abares-compatible field semantics
+weekly_prices,Official Weekly HTML tables, PDF reports, quarterly ZIP archives and chart alt text,FALSE,exact table schema, canonical indicator registry and dated accessible chart description

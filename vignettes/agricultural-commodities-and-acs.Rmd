@@ -1,0 +1,211 @@
+---
+title: "Read Agricultural Commodities and ACS tables"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Read Agricultural Commodities and ACS tables}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`read_agricultural_commodities()` reads two related but distinct workbook
+families: medium-term Agricultural Commodities outlooks and Agricultural
+Commodity Statistics (ACS). This article uses the package's small,
+package-owned synthetic workbooks. They preserve workbook shapes and marker
+tokens for deterministic parser examples; their values are not official
+ABARES data.
+
+## Setup and offline fixtures
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE
+)
+
+library(readagau)
+
+fixture <- function(...) {
+  path <- system.file("fixtures", ..., package = "readagau")
+  stopifnot(nzchar(path))
+  path
+}
+
+march_path <- fixture("workbooks", "ac-march-outlook.xlsx")
+june_path <- fixture("workbooks", "ac-june-outlook.xlsx")
+statistics_path <- fixture("workbooks", "commodity-statistics.xlsx")
+cache_dir <- file.path(tempdir(), paste0("readagau-ac-vignette-", Sys.getpid()))
+dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+Passing named local paths makes the dataset role explicit and keeps all
+examples offline. The reader still records a local checksum identity and the
+physical source asset in every returned row.
+
+## Compare outlook profiles
+
+March and non-March outlooks have different admitted sheet layouts. Let the
+parser identify the profile from sheet structure rather than relying on a
+sheet position or a hand-written column offset.
+
+```{r outlook-profiles}
+march <- read_agricultural_commodities(
+  c(outlook = march_path),
+  datasets = "outlook",
+  view = "reported",
+  cache_dir = cache_dir
+)
+june <- read_agricultural_commodities(
+  c(outlook = june_path),
+  datasets = "outlook",
+  view = "reported",
+  cache_dir = cache_dir
+)
+
+stopifnot(
+  inherits(march, "agricultural_commodities_data"),
+  inherits(june, "agricultural_commodities_data"),
+  all(march$dataset == "commodities_outlook"),
+  all(june$dataset == "commodities_outlook")
+)
+
+data.frame(
+  profile = c("March outlook", "non-March outlook"),
+  observations = c(nrow(march), nrow(june)),
+  tables = c(length(unique(march$table_id)), length(unique(june$table_id))),
+  release_id = c(unique(march$release_id), unique(june$release_id))
+)
+```
+
+The shared observation contract retains target period, status, source sheet,
+semantic table, unit, and provenance. The nested heading dimensions used by
+outlook tables are explicit fields rather than display-only text:
+
+```{r outlook-contract}
+knitr::kable(utils::head(
+  march[c(
+    "source_asset", "source_sheet", "table_id", "table_title", "sector",
+    "commodity", "concept", "period", "period_basis", "period_status",
+    "unit", "currency", "price_basis", "value", "raw_value"
+  )],
+  8L
+))
+```
+
+An unsuffixed source period remains `published-unclassified`; suffixes retain
+the source's estimate, forecast, or projection status. Do not treat the
+status as a guess based on the position of a year in a row.
+
+## Read ACS statistics and preserve missing markers
+
+ACS has its own table family. Select it with `datasets = "statistics"` and
+inspect the controlled `missing_reason` field when a cell is not numeric.
+Missing, suppressed, confidential, unavailable, and provider-specific `NA`
+markers remain numeric `NA`; they are never silently converted to zero.
+
+```{r acs-statistics}
+acs <- read_agricultural_commodities(
+  c(statistics = statistics_path),
+  datasets = "statistics",
+  view = "reported",
+  cache_dir = cache_dir
+)
+acs_validation <- validate_agau_release(acs)
+stopifnot(
+  inherits(acs, "agricultural_commodities_data"),
+  isTRUE(acs_validation$valid),
+  all(grepl("^acs_table_", acs$table_id))
+)
+
+data.frame(
+  class = class(acs)[1L],
+  observations = nrow(acs),
+  tables = length(unique(acs$table_id)),
+  valid = acs_validation$valid,
+  missing_cells = sum(!is.na(acs$missing_reason))
+)
+```
+
+```{r acs-missing-preview}
+missing <- acs[!is.na(acs$missing_reason), c(
+  "table_id", "source_sheet", "commodity", "concept", "period",
+  "raw_value", "value", "missing_reason"
+), drop = FALSE]
+knitr::kable(utils::head(missing, 8L))
+```
+
+If a source contains no missing markers, `missing` is an empty table and the
+contract still holds. Use `raw_value` and `missing_reason` together when
+auditing a source or explaining why a numeric value is absent.
+
+## Reported and canonical views
+
+`view = "reported"` is the source-faithful view. `view = "canonical"` applies
+the versioned precedence policy to semantically equivalent observations and
+marks the retained rows as canonical. For Agricultural Commodities, outlook
+rows take precedence for estimates and forecasts, while statistics rows are
+preferred for historical observations when their identities are equivalent.
+The policy does not merge distinct markets, currencies, units, methods, or
+period bases.
+
+```{r ac-views}
+march_canonical <- read_agricultural_commodities(
+  c(outlook = march_path),
+  datasets = "outlook",
+  view = "canonical",
+  cache_dir = cache_dir
+)
+stopifnot(
+  inherits(march_canonical, "agricultural_commodities_data"),
+  all(march_canonical$record_role == "canonical")
+)
+
+data.frame(
+  view = c("reported", "canonical"),
+  observations = c(nrow(march), nrow(march_canonical)),
+  canonical_rows = c(
+    sum(march$record_role == "canonical"),
+    sum(march_canonical$record_role == "canonical")
+  )
+)
+```
+
+To compare two releases, prefer exact release IDs and retain the source
+metadata. The vintage helpers compare semantic keys rather than row numbers;
+see `vignette("comparing-revisions-and-errors")` for revision and forecast
+error operations.
+
+## Table and series metadata
+
+Use the source catalogue when you need to explain which table families are
+admitted. It is metadata and does not contain a claim that the synthetic
+fixtures are official data.
+
+```{r acs-catalogue}
+catalogue <- agau_source_catalog()
+acs_catalogue <- catalogue[
+  catalogue$product == "agricultural_commodities" &
+    catalogue$dataset == "commodity_statistics" &
+    grepl("^acs_table_", catalogue$table_id),
+  c("table_id", "source_label", "semantic_family", "parser_family",
+    "admission_status"),
+  drop = FALSE
+]
+knitr::kable(utils::head(acs_catalogue, 8L))
+```
+
+## Online use and provenance
+
+The examples above deliberately use local files. For a live workflow, select
+an exact supported release from `list_agau_releases()` and pass that release ID
+to the reader. A missing exact asset may be downloaded into the managed
+`tools::R_user_dir()` cache; a complete local path or exact cache hit can be
+replayed offline. No credentials are required for the public source pages,
+but network availability, upstream layout changes, and source-data terms are
+outside the package's control.
+
+When publishing derived results, retain `release_id`, `release_date`,
+`source_url`, `sha256`, `parser_version`, and the relevant attribution fields.
+Package code and package-owned synthetic fixtures: MIT, copyright Chartwell Macro.
+Source data, logos, government marks, and third-party material remain subject
+to their own terms.

@@ -1,0 +1,199 @@
+---
+title: "Source files, identities, and vintages"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Source files, identities, and vintages}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This article explains the identity and provenance choices that make a
+`readagau` result reproducible. It uses the package's small, package-owned
+synthetic workbook fixture, so it never contacts an official website. The
+fixture has the shape of an Australian Crop Report workbook but its values are
+not official source data.
+
+## Discover once, then pin an exact release
+
+Release discovery is metadata work. The bundled catalogue can be inspected
+offline, while `refresh = TRUE` asks `readagau` to revisit the publisher's
+landing pages. The result of a discovery is a release manifest with an exact
+`release_id`, date, landing page, and asset roles:
+
+```{r discover-releases}
+library(readagau)
+library(knitr)
+
+cache_dir <- tempfile("readagau-source-cache-", tmpdir = tempdir())
+dir.create(cache_dir, recursive = TRUE)
+
+releases <- list_agau_releases(
+  products = "crop_report",
+  cache_dir = cache_dir
+)
+latest_row <- releases[which.max(releases$release_date), , drop = FALSE]
+kable(data.frame(
+  release_id = latest_row$release_id,
+  release_date = latest_row$release_date,
+  landing_url = latest_row$landing_url,
+  stringsAsFactors = FALSE
+))
+```
+
+`latest` is a convenient selector, not a durable identifier: a later
+discovery can change which release is newest. For an analysis, record the
+exact ID returned by discovery (and the source hash) in the analysis metadata.
+`compare_agau_vintages()` also requires exact releases; it rejects `latest`
+because a moving selector cannot define a stable comparison.
+
+## Local files have a checksum identity by default
+
+Passing a local workbook is the deterministic, offline path. If no release
+metadata is supplied, the reader deliberately does not infer an official
+release from a filename, file date, or workbook contents. Instead it uses a
+checksum-qualified ID of the form `local-<first 16 SHA-256 characters>` and
+leaves `release_date` missing:
+
+```{r local-checksum-identity}
+state_path <- system.file(
+  "fixtures", "workbooks", "crop-state.xlsx", package = "readagau"
+)
+stopifnot(nzchar(state_path), file.exists(state_path))
+
+reported <- read_crop_report(
+  c(state = state_path),
+  assets = "state",
+  view = "reported",
+  cache_dir = cache_dir
+)
+
+local_identity <- data.frame(
+  identity = unique(reported$release_id),
+  release_date = as.character(unique(reported$release_date)),
+  rows = nrow(reported),
+  sha256_prefix = substr(unique(reported$sha256), 1L, 16L),
+  stringsAsFactors = FALSE
+)
+kable(local_identity, row.names = FALSE)
+stopifnot(
+  grepl("^local-[a-f0-9]{16}$", local_identity$identity),
+  is.na(reported$release_date[[1]])
+)
+```
+
+If the bytes have been matched to an audited edition, supply both values
+explicitly. Supplying only one is rejected with an `agau_validation_error`,
+because an ID without its date (or a date without its ID) is ambiguous:
+
+```{r explicit-release-identity}
+exact_id <- "acr-2026-06-02-no-218"
+exact_date <- as.Date("2026-06-02")
+
+official_identity <- read_crop_report(
+  c(state = state_path),
+  assets = "state",
+  view = "reported",
+  cache_dir = cache_dir,
+  release_id = exact_id,
+  release_date = exact_date
+)
+
+kable(data.frame(
+  identity = unique(official_identity$release_id),
+  release_date = unique(official_identity$release_date),
+  rows = nrow(official_identity),
+  stringsAsFactors = FALSE
+), row.names = FALSE)
+```
+
+The explicit identity is a provenance assertion by the caller. Make it only
+after matching the bytes to a reviewed release; it does not turn a synthetic
+fixture into official data.
+
+## Reported and canonical views
+
+The same bytes can be read in two intentionally different views. `reported`
+retains the source presentation and its `record_role`; `canonical` applies the
+package's versioned precedence rules where multiple physical rows represent
+one semantic observation. Canonicalisation is within a product and does not
+silently merge unrelated products:
+
+```{r reported-canonical}
+canonical <- read_crop_report(
+  c(state = state_path),
+  assets = "state",
+  view = "canonical",
+  cache_dir = cache_dir
+)
+
+view_summary <- data.frame(
+  view = c("reported", "canonical"),
+  rows = c(nrow(reported), nrow(canonical)),
+  record_roles = c(
+    paste(names(table(reported$record_role)), table(reported$record_role),
+      sep = ":", collapse = "; "),
+    paste(names(table(canonical$record_role)), table(canonical$record_role),
+      sep = ":", collapse = "; ")
+  ),
+  stringsAsFactors = FALSE
+)
+kable(view_summary, row.names = FALSE)
+```
+
+Both views retain `source_dataset`, `source_sheet`, `sha256`, parser version,
+and semantic fields. Use `reported` when auditing a source layout or preserving
+every presentation; use `canonical` when joining observations across
+workbooks under the documented precedence policy.
+
+## Content-addressed raw and parsed cache
+
+Raw assets are immutable. Their path is organised as
+`raw/<product>/<release_id>/<sha256>/<asset>`, and the manifest records the
+source URL, source filename, detected format, retrieval headers, size and
+validation status. Parsed results use a separate key containing the release,
+source hash, parser profile, dataset, selected sheets, and view. A changed
+byte sequence therefore creates a new raw object instead of overwriting old
+evidence.
+
+The next example seeds an exact-release cache from the packaged local fixture
+using the package's cache writer, then calls the public exact-release download
+function. The second call is a cache replay: it has the same hash and does not
+need discovery or network access. The internal writer is used only to make the
+offline demonstration self-contained; normal online use populates the same
+layout through `read_crop_report()` or `download_agau_release()`.
+
+```{r cache-replay}
+manifest <- readagau:::agau_cache_asset(
+  product = "crop_report",
+  release_id = exact_id,
+  asset_type = "state",
+  source_url = state_path,
+  cache_dir = cache_dir
+)
+replay <- download_agau_release(
+  product = "crop_report",
+  release = exact_id,
+  assets = "state",
+  cache_dir = cache_dir
+)
+
+cache_summary <- data.frame(
+  asset_type = manifest$asset_type,
+  detected_format = manifest$detected_format,
+  hash_directory = basename(dirname(manifest$local_path)),
+  sha256_prefix = substr(manifest$sha256, 1L, 16L),
+  replay_same_hash = identical(manifest$sha256, replay$sha256[[1]]),
+  stringsAsFactors = FALSE
+)
+kable(cache_summary, row.names = FALSE)
+stopifnot(
+  identical(manifest$sha256, basename(dirname(manifest$local_path))),
+  identical(manifest$sha256, replay$sha256[[1]])
+)
+```
+
+Use a project- or session-specific `cache_dir` in reproducible jobs. The
+default `agau_cache_dir()` is a managed `tools::R_user_dir()` location; it is
+not the working directory and is not a place to store credentials. `refresh =
+TRUE` is an explicit request to look for new source bytes. It never mutates a
+previous hash-addressed object.

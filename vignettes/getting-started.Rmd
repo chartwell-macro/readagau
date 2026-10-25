@@ -1,0 +1,303 @@
+---
+title: "Getting started with readagau"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with readagau}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`readagau` provides reproducible access to versioned Australian agricultural
+data published by the Australian Bureau of Agricultural and Resource Economics
+and Sciences (ABARES). It discovers exact releases, caches source assets,
+parses workbooks and reports into semantic observations, and retains source
+identity and content-hash provenance.
+
+The installed, package-owned synthetic fixtures make this first parser
+workflow deterministic and fully offline. They are clearly marked as
+documentation structures; use the package's live or reviewed local-source
+paths when you need official ABARES observations.
+
+## Install and load
+
+Install the development version from GitHub while the package is not yet on
+CRAN:
+
+```r
+install.packages("pak")
+pak::pak("chartwell-macro/readagau")
+```
+
+Then load the package:
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  message = FALSE
+)
+
+library(readagau)
+
+fixture <- function(...) {
+  path <- system.file("fixtures", ..., package = "readagau")
+  stopifnot(nzchar(path))
+  path
+}
+
+cache_dir <- file.path(tempdir(), paste0("readagau-start-", Sys.getpid()))
+dir.create(cache_dir, recursive = TRUE, showWarnings = FALSE)
+```
+
+## First success: read a local Crop Report workbook
+
+The package accepts a local workbook path as a release. Naming the path
+`national` supplies the asset role explicitly. `view = "canonical"` asks the
+package to apply its versioned precedence policy; use `view = "reported"` for
+an audit of every admitted source row.
+
+```{r first-success}
+crop_path <- fixture("workbooks", "crop-national.xlsx")
+
+crop <- read_crop_report(
+  c(national = crop_path),
+  assets = "national",
+  view = "canonical",
+  cache_dir = cache_dir
+)
+validation <- validate_agau_release(crop)
+stopifnot(
+  inherits(crop, "crop_report_data"),
+  "agau_data" %in% class(crop),
+  isTRUE(validation$valid)
+)
+
+data.frame(
+  class = class(crop)[1L],
+  observations = nrow(crop),
+  tables = length(unique(crop$table_id)),
+  valid = validation$valid
+)
+```
+
+The result is a tibble with product-specific class `crop_report_data` and
+shared class `agau_data`. A product reader's rows include semantic dimensions
+such as `table_id`, `geography`, `commodity`, `concept`, `period`, and
+`period_status`, plus numeric `value`, original `raw_value`, and provenance.
+
+```{r first-preview}
+knitr::kable(utils::head(crop[c(
+  "table_id", "geography", "commodity", "concept", "period",
+  "period_status", "value", "unit"
+)], 6L))
+```
+
+`validate_agau_release()` returns a structured
+`agau_validation_report`. Its `valid` field checks required semantic fields,
+controlled status and rights values, unique canonical keys, source notes, and
+content-hash shape. Inspect the report when a parse fails validation instead
+of silently repairing the rows.
+
+## Checksum-qualified identity for local files
+
+Because this file is local and no release metadata was supplied, the reader
+assigns a checksum-qualified local identity. Reviewed official identity is
+assigned only when the release metadata is explicit:
+
+```{r first-identity}
+local_identity <- unique(crop[c(
+  "release_id", "release_date", "source_asset", "sha256", "parser_version"
+)])
+stopifnot(
+  nrow(local_identity) == 1L,
+  startsWith(local_identity$release_id, "local-"),
+  is.na(local_identity$release_date),
+  grepl("^[a-f0-9]{64}$", local_identity$sha256)
+)
+knitr::kable(local_identity)
+```
+
+For a reviewed local copy of an exact official edition, pass both
+`release_id` and `release_date`; supplying only one is a validation error.
+Persist those fields, the source URL, SHA-256, and `parser_version` with any
+derived result.
+
+## Discover releases and choose an exact one
+
+`list_agau_releases()` returns release metadata and support status. With
+`refresh = FALSE` and a temporary cache, this catalogue example is offline:
+
+```{r release-catalogue}
+releases <- list_agau_releases(
+  products = "crop_report",
+  refresh = FALSE,
+  cache_dir = cache_dir
+)
+knitr::kable(releases[seq_len(min(6L, nrow(releases))), c(
+  "release_id", "release_date", "support_status", "unsupported_reason"
+)])
+```
+
+Discovery metadata records support status separately. Choose a supported exact
+release with an admitted asset role and parser profile for reproducible work;
+`"latest"` remains available for exploration.
+
+## Retrieve and chart a time series
+
+Inspect the installed registry, select stable source IDs, and pass exact dated
+snapshots to `read_agau_prices()`. This example uses A2 (wheat) and A3 (corn)
+and retains the returned date, value, and series columns. Its installed
+fixtures are package-owned synthetic structures, so the chart demonstrates
+the real offline parser path rather than official prices.
+
+```{r discover-series}
+weekly_registry <- agau_series_catalog("weekly_commodity_prices")
+selected_series <- c("A2", "A3")
+weekly_registry[
+  weekly_registry$source_series_id %in% selected_series,
+  c("source_series_id", "indicator", "commodity", "market", "source_provider")
+]
+```
+
+```{r retrieve-series}
+weekly_fixture_names <- c(
+  "weekly-2016-10-13.txt", "weekly-2018-03-08.txt",
+  "weekly-2018-05-17.txt", "weekly-2018-07-05.txt",
+  "weekly-2018-10-18.txt", "weekly-2019-05-16.txt",
+  "weekly-2019-06-06.txt", "weekly-2021-03-25.txt",
+  "weekly-2025-07-10.txt"
+)
+weekly_fixture_paths <- file.path(
+  system.file("fixtures", "text", package = "readagau"),
+  weekly_fixture_names
+)
+
+weekly_history <- read_agau_prices(
+  snapshot = weekly_fixture_paths,
+  series = selected_series,
+  measures = "latest_price",
+  include_charts = FALSE,
+  cache_dir = cache_dir
+)
+
+chart_data <- weekly_history[
+  weekly_history$record_role == "latest_price" &
+    !is.na(weekly_history$observation_date) &
+    !is.na(weekly_history$value),
+  c("observation_date", "value", "commodity", "unit"),
+  drop = FALSE
+]
+chart_data <- chart_data[
+  order(chart_data$observation_date, chart_data$commodity),
+  ,
+  drop = FALSE
+]
+```
+
+When `ggplot2` is installed, the following code renders the retrieved values
+as a simple line chart. It is conditional so the rest of the offline article
+remains runnable when the optional plotting package is unavailable.
+
+```{r series-chart, fig.width = 5, fig.height = 4.2, fig.alt = "Line chart of synthetic weekly wheat and corn fixture values across nine observation dates."}
+if (requireNamespace("ggplot2", quietly = TRUE)) {
+  ggplot2::ggplot(
+    chart_data,
+    ggplot2::aes(
+      x = observation_date, y = value,
+      colour = commodity, group = commodity
+    )
+  ) +
+    ggplot2::geom_line() +
+    ggplot2::labs(
+      title = "Synthetic weekly wheat and corn series",
+      subtitle = "Weekly observations from package-owned fixtures",
+      x = "Observation date",
+      y = "Fixture value (US$/t)",
+      colour = "Commodity",
+      caption = "Source: readagau package-owned synthetic fixtures"
+    ) +
+    ggplot2::theme_minimal(base_size = 13)
+}
+```
+
+Every parsed row also retains release identity and content-hash provenance.
+For a reproducible analysis, save `release_date`, `source_asset`, `sha256`, and
+`parser_version` alongside the chart data.
+
+## Other supported source families
+
+The same local-first pattern applies to the other readers:
+
+```{r other-readers}
+commodities <- read_agricultural_commodities(
+  c(outlook = fixture("workbooks", "ac-march-outlook.xlsx")),
+  datasets = "outlook",
+  view = "reported",
+  cache_dir = cache_dir
+)
+productivity <- read_farm_productivity(
+  fixture("workbooks", "farm-productivity.xlsx"),
+  view = "reported",
+  cache_dir = cache_dir
+)
+forecast_history <- read_agau_forecast_history(
+  fixture("workbooks", "historical-forecast.csv")
+)
+
+data.frame(
+  reader = c("Agricultural Commodities", "Farm Productivity", "Forecast history"),
+  class = c(
+    class(commodities)[1L], class(productivity)[1L],
+    class(forecast_history)[1L]
+  ),
+  observations = c(nrow(commodities), nrow(productivity), nrow(forecast_history))
+)
+```
+
+Agricultural Commodities and Crop Report readers return the shared observation
+contract and support reported/canonical views. Farm Productivity adds method
+and financial-year semantics. The Historical Agricultural Forecast Database
+has its own `agau_forecast_history` contract because it is a forecast/actual
+database rather than a release observation table.
+
+For weekly commodity prices, pass a local HTML, PDF, Word, text, or ZIP path
+to `read_agau_prices(snapshot = path)`. It returns the dedicated weekly-price
+schema and source-provider fields; the vintage-comparison helpers cover the
+release-product families described in the comparison article.
+
+## Network, cache, and system requirements
+
+The local workflows above do not require network access. Online discovery,
+`release = "latest"`, missing exact assets, and current weekly pages may use
+the network and cache immutable bytes under the managed
+`tools::R_user_dir("readagau", "cache")` location. No credentials are
+required for public source pages. Prefer a dedicated temporary `cache_dir` in
+examples and tests.
+
+PDF input additionally requires the `pdftotext` executable from Poppler. HTML,
+workbook, CSV, Word, and packaged-fixture workflows do not require Poppler.
+Upstream layout changes are handled by schema gates: a changed or ambiguous
+asset fails with a typed condition rather than being silently guessed.
+
+## Next steps
+
+Continue with the task-specific articles:
+
+- `vignette("crop-report-tables")` for national/state roles and canonicalisation;
+- `vignette("agricultural-commodities-and-acs")` for outlook and ACS profiles;
+- `vignette("farm-productivity-methods")` for conventional and
+  climate-adjusted methods;
+- `vignette("weekly-commodity-prices")` for current and historical Weekly
+  inputs;
+- `vignette("historical-forecast-database")` for forecast/actual history;
+- `vignette("source-files-and-vintages")` for exact assets and provenance;
+- `vignette("comparing-revisions-and-errors")` for semantic vintage
+  comparisons; and
+- `vignette("cache-and-troubleshooting")` for offline replay and failures.
+
+Use `agau_observation_schema()`, `agau_source_catalog()`, and
+`agau_attribution()` to inspect the machine-readable contracts and source
+rights guidance before publishing derived results. Package code and
+package-owned synthetic fixtures are licensed under MIT, copyright Chartwell Macro;
+source data, logos, government marks, and third-party content remain subject
+to their own terms.

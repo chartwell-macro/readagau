@@ -1,0 +1,105 @@
+url: https://chartwell-macro.github.io/readagau/
+
+template:
+  bootstrap: 5
+
+home:
+  title: "readagau: Reproducible Australian Agricultural Data"
+  description: >
+    Reproducible access to versioned Australian agricultural data published by
+    the Australian Bureau of Agricultural and Resource Economics and Sciences.
+  links:
+    - text: Install from GitHub
+      href: https://github.com/chartwell-macro/readagau
+    - text: Report an issue
+      href: mailto:chartwellmacro@gmail.com
+
+development:
+  mode: auto
+
+destination: site
+
+repo:
+  url:
+    home: https://github.com/chartwell-macro/readagau/
+    issue: mailto:chartwellmacro@gmail.com
+
+navbar:
+  structure:
+    left: [home, reference, articles, news]
+    right: [github, issues]
+  components:
+    news:
+      text: Changelog
+      href: news/index.html
+    github:
+      icon: fab fa-github
+      href: https://github.com/chartwell-macro/readagau
+      aria-label: GitHub repository
+    issues:
+      icon: fas fa-bug
+      href: mailto:chartwellmacro@gmail.com
+      aria-label: Report an issue
+
+reference:
+  - title: "Start here"
+    contents:
+      - readagau-package
+  - title: "Discover releases and manage the cache"
+    contents:
+      - list_agau_releases
+      - download_agau_release
+      - agau_cache_dir
+      - agau_detect_format
+  - title: "Read product data"
+    contents:
+      - read_crop_report
+      - read_agricultural_commodities
+      - read_farm_productivity
+      - read_agau_forecast_history
+      - read_agau_prices
+  - title: "Compare vintages and forecast error"
+    contents:
+      - agau_series_catalog
+      - compare_agau_vintages
+      - agau_history_revision
+      - agau_forecast_revision
+      - agau_forecast_error
+  - title: "Validate and inspect contracts"
+    contents:
+      - validate_agau_release
+      - print.agau_validation_report
+      - print.agau_data
+      - agau_observation_schema
+      - agau_release_manifest_schema
+      - agau_raw_asset_manifest_schema
+      - agau_source_catalog
+  - title: "Metadata, status, and attribution"
+    contents:
+      - agau_attribution
+      - crop_report_attribution
+      - agau_status
+      - agau_missing_reason
+
+articles:
+  - title: "Start here"
+    navbar: "Start here"
+    contents:
+      - getting-started
+  - title: "Discover and read source data"
+    navbar: "Source data"
+    contents:
+      - source-files-and-vintages
+      - crop-report-tables
+      - agricultural-commodities-and-acs
+      - historical-forecast-database
+      - farm-productivity-methods
+      - weekly-commodity-prices
+  - title: "Reproducibility and troubleshooting"
+    navbar: "Troubleshooting"
+    contents:
+      - cache-and-troubleshooting
+  - title: "Compare releases"
+    navbar: "Compare releases"
+    contents:
+      - comparing-revisions-and-errors

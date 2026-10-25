@@ -1,0 +1,7 @@
+"release_id","status","observed_identity","pdf_sha256","word_sha256","disposition"
+"weekly-prices-2021-01-14","missing","","","","Official release page has no retrievable report asset"
+"weekly-prices-2021-01-21","missing","","","","Official release page has no retrievable report asset"
+"weekly-prices-2021-11-25","wrong_asset","2021-12-02","54729c46bc50942da5a6dd59146a4174395fcb7e6987c8012e69f435ff463564","","Indexed asset is the 2 December report"
+"weekly-prices-2023-01-19","malformed","2023-01-19","7e247841f0587d20b1985fb5d203dbcce69e385fe17d19a12b2054d37225334a","","Shifted indicator labels and values make canonical identity ambiguous"
+"weekly-prices-2024-11-21","malformed","2024-11-21","237f49ee90902522e78150a1cdda98bd49d3130c3d7bd653aac500ab2f66d9b6","2a1a248c38f820d111263ba43fac40a7c57fa9aa54cc6d64d2baf638d140babd","PDF and Word tables omit one numeric series and shift labels and values"
+"weekly-prices-2025-09-25","wrong_asset","2025-10-02","11b4eb0c8426a3436f59c47befa57c7875ff236801a87ace7c6af4a72c345e1f","","Indexed PDF and Word assets are the 2 October report"

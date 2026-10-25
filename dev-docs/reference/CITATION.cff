@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: >
+  If you use readagau, please cite the package and the underlying official
+  source. Package code and package-owned synthetic fixtures are licensed under
+  MIT, copyright Chartwell Macro. Upstream data and provider material retain their own
+  rights.
+title: "readagau: Reproducible Australian Agricultural Data"
+type: software
+authors:
+  - family-names: Macro
+    given-names: Chartwell
+version: 0.1.0
+license: MIT
+repository-code: "https://github.com/chartwell-macro/readagau"

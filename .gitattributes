@@ -1,0 +1,2 @@
+inst/fixtures/html/weekly-*.html -whitespace
+inst/fixtures/pdf/*.pdf -diff -whitespace
