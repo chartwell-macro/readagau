@@ -1,0 +1,22 @@
+---
+title: "Source files and vintages"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Source files and vintages}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`readagau` identifies a release from official landing-page metadata. Exact
+edition pages supply asset links; filenames are not release keys and URLs are
+not constructed. `latest` resolves once at the start of a request.
+
+Raw assets are immutable and content-addressed by SHA-256. The asset manifest
+retains its exact source URL, source filename (including blank or misleading
+names), detected byte format, retrieval headers, size and local path. Parsed
+observations retain the physical dataset and source hash.
+
+`view = "reported"` returns every published presentation.
+`view = "canonical"` applies the versioned precedence policy without
+canonicalising across products.
+

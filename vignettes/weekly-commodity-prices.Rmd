@@ -1,0 +1,41 @@
+---
+title: "Weekly commodity prices"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Weekly commodity prices}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(eval = FALSE)
+```
+
+`read_agau_prices()` reads the current official HTML table and 33 accessible
+chart observations, an exact dated PDF or Word report, the complete table
+history, or local official HTML, PDF, Word, text-extract and quarterly ZIP
+snapshots.
+
+```{r}
+library(readagau)
+
+list_agau_releases("weekly_commodity_prices")
+
+latest <- read_agau_prices(snapshot = "latest")
+
+exact <- read_agau_prices(snapshot = "weekly-prices-2016-10-13")
+
+selected <- read_agau_prices(
+  snapshot = "all",
+  series = c("A2", "A14", "H1"),
+  measures = c("latest_price", "annual_change"),
+  from = "2020-01-01"
+)
+```
+
+The complete-table history contains 475 verified snapshots from 13 October
+2016 through 23 July 2026. Each table row retains the published week-average
+date, snapshot date, source provider, unit, raw value, parsed value, source
+hash and parser version. Current charts add all A1–A25 and H1–H8 observations
+using the exact value and observation date in the official accessible image
+description.

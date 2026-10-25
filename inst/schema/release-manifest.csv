@@ -1,0 +1,14 @@
+field,type,required,meaning
+product,character,true,Stable source product
+release_id,character,true,Stable exact release or snapshot identifier
+release_date,Date,true,Official landing-page publication date
+edition,character,true,Published edition label
+landing_url,character,true,Official release page
+asset_roles,list<character>,true,Discovered product-specific roles
+asset_status,character,true,Complete partial or invalid
+support_status,character,true,Supported discovered-unverified or unsupported
+unsupported_reason,character,false,Explicit admission blocker
+discovered_at,POSIXct<UTC>,true,UTC discovery time
+discovery_version,character,true,Discovery/parser contract version
+warning,character,true,Non-fatal source anomaly
+report_number,character,false,Official report number

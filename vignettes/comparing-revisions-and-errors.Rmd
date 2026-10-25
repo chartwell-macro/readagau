@@ -1,0 +1,18 @@
+---
+title: "Comparing forecast revisions and errors"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Comparing forecast revisions and errors}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+`agau_history_revision()`, `agau_forecast_revision()` and
+`agau_forecast_error()` are deliberately separate operations. Comparisons join
+semantic observation keys, never row coordinates.
+
+Forecast error defaults to the first later estimate or historical
+observation. `realisation = "latest_revised"` is explicitly labelled and does
+not overwrite the original error concept. Non-unique joins and incompatible
+semantic bases fail with a typed validation error.
+

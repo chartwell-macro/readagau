@@ -1,0 +1,19 @@
+---
+title: "Agricultural Commodities and ACS tables"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Agricultural Commodities and ACS tables}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+March medium-term outlooks preserve `z` projections and split commodity
+sheets. Non-March profiles preserve short-term percentage-change columns and
+combined commodity sheets. Nested headings are represented in semantic
+concepts, with market, period basis, nominal/real price basis, currency and
+unit retained.
+
+The statistical workbook exposes `acs_table_01` through `acs_table_18`.
+Missing, confidential and suppressed tokens remain numeric `NA` with their raw
+value and controlled reason; they are never converted to zero.
+

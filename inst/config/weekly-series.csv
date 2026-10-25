@@ -1,0 +1,36 @@
+source_series_id,pattern,indicator,commodity,sector,market,source_provider,source_cadence
+A1,"AUD/USD|Australian Dollar.*Exchange Rate",AUD/USD exchange rate,Australian dollar,world,Australian dollar per United States dollar,ABARES,weekly
+A2,"Wheat.*US (?:no\\.|No\\.)? ?2 hard red winter",Wheat – US no. 2 hard red winter wheat FOB Gulf,wheat,world,United States hard red winter wheat FOB Gulf,International Grains Council,weekly
+A3,"^(?:Corn|Coarse Grains).*US (?:no\\.|No\\.)? ?2 yellow corn",Corn – US no. 2 yellow corn FOB Gulf,corn,world,United States yellow corn FOB Gulf,USDA,weekly
+A4,"Canola.*Rapeseed.*(?:Canada|Europe)",Canola – rapeseed,canola,world,Rapeseed export indicator,International Grains Council,weekly
+A5,"Cotton.*Cotlook",Cotton – Cotlook A Index,cotton,world,Cotlook A Index,Cotlook,weekly
+A6,"Sugar.*(?:Intercontinental Exchange|no\\. ?11 contract)",Sugar – ICE no. 11 nearby futures,sugar,world,ICE no. 11 nearby futures,Intercontinental Exchange,weekly
+A7,"Wool.*Eastern Market",Wool – Eastern Market Indicator,wool,world,Eastern Market Indicator,Australian Wool Exchange,weekly
+A8,"Wool.*Western Market",Wool – Western Market Indicator,wool,world,Western Market Indicator,Australian Wool Exchange,weekly
+A9,"(?:Aust(?:ralian)?\\.? premium white|Milling Wheat).*?(?:APW|ASW1|Port Adelaide)",Australian milling wheat,milling wheat,domestic_grain,Australian milling wheat indicator,Jumbuk AG,weekly
+A10,"(?:Aust(?:ralian)?\\.? standard white|Feed Wheat).*?(?:ASW|General purpose)",Australian feed wheat,feed wheat,domestic_grain,Australian feed wheat indicator,Jumbuk AG,weekly
+A11,"Feed Barley",Feed barley,feed barley,domestic_grain,Australian feed barley indicator,Jumbuk AG,weekly
+A12,"Canola.*(?:Kwinana|Portland)",Australian canola,canola,domestic_grain,Australian canola indicator,Jumbuk AG,weekly
+A13,"Grain Sorghum",Grain sorghum,grain sorghum,domestic_grain,Australian grain sorghum indicator,Jumbuk AG,weekly
+A14,"Beef.*(?:Eastern Young Cattle|Young cattle)",Beef – young cattle indicator,beef,domestic_livestock,Australian young cattle indicator,Meat and Livestock Australia,weekly
+A15,"Mutton",Mutton indicator,mutton,domestic_livestock,Australian mutton indicator,Meat and Livestock Australia,weekly
+A16,"Lamb.*(?:Trade Lamb|Lamb indicator)",Trade lamb indicator,lamb,domestic_livestock,Australian trade lamb indicator,Meat and Livestock Australia,weekly
+A17,"Pig",Pig buyer price,pig,domestic_livestock,Australian pig buyer price,Australian Pork Limited,weekly
+A18,"Live cattle",Live cattle to Indonesia,live cattle,domestic_livestock,Light steers to Indonesia,Meat and Livestock Australia,weekly
+A19,"Dairy.*Whole milk powder",Dairy – whole milk powder,whole milk powder,dairy,Global Dairy Trade weighted average,Global Dairy Trade,twice_monthly
+A20,"Dairy.*Skim milk powder",Dairy – skim milk powder,skim milk powder,dairy,Global Dairy Trade weighted average,Global Dairy Trade,twice_monthly
+A21,"Dairy.*Cheddar cheese",Dairy – cheddar cheese,cheddar cheese,dairy,Global Dairy Trade weighted average,Global Dairy Trade,twice_monthly
+A22,"Dairy.*Anhydrous milk fat",Dairy – anhydrous milk fat,anhydrous milk fat,dairy,Global Dairy Trade weighted average,Global Dairy Trade,twice_monthly
+A23,"Cereal Hay",Cereal hay,cereal hay,domestic_fodder,Delivered Shepparton Victoria,Jumbuk AG,weekly
+A24,"Pasture Hay",Pasture hay,pasture hay,domestic_fodder,Delivered Shepparton Victoria,Jumbuk AG,weekly
+A25,"Lucerne Hay",Lucerne hay,lucerne hay,domestic_fodder,Delivered Shepparton Victoria,Jumbuk AG,weekly
+H1,"Apple|Apples",Apple – Royal Gala,apple,horticulture,Melbourne wholesale market price index,Datafresh,weekly
+H2,"Banana|Bananas",Banana – Cavendish,banana,horticulture,Melbourne wholesale market price index,Datafresh,weekly
+H3,"Orange|Oranges",Orange – Navel,orange,horticulture,Melbourne wholesale market price index,Datafresh,weekly
+H4,"Strawberr",Strawberry,strawberry,horticulture,Melbourne wholesale market price index,Datafresh,weekly
+H5,"Carrot",Carrot,carrot,horticulture,Melbourne wholesale market price index,Datafresh,weekly
+H6,"Potato|Potatoes",Potato – Dutch cream,potato,horticulture,Melbourne wholesale market price index,Datafresh,weekly
+H7,"Tomato|Tomatoes",Tomato – gourmet,tomato,horticulture,Melbourne wholesale market price index,Datafresh,weekly
+H8,"Onion",Onion – brown,onion,horticulture,Melbourne wholesale market price index,Datafresh,weekly
+L1,"Goats?\\s*[–-]|Goats? –",Goat indicator,goat,legacy_livestock,Australian goat indicator,Meat and Livestock Australia,weekly
+L2,"Live sheep",Live sheep export indicator,live sheep,legacy_livestock,Live wethers to Middle East,Meat and Livestock Australia,weekly

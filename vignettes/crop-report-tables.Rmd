@@ -1,0 +1,20 @@
+---
+title: "Crop Report tables"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Crop Report tables}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The national workbook exposes semantic IDs `crop_national_table_01` through
+`crop_national_table_17`. Parsers cover national/state totals, current state
+snapshots, national histories, recent state production, supply/disposal and
+quarterly prices. The state workbook parser covers Australia and six states,
+including compact/spaced sheet aliases.
+
+Statuses come from explicit `s` and `f` suffixes. Periods without explicit
+source status remain `published-unclassified`. March and non-March table-shape
+variants are selected using title and structural fingerprints rather than
+sheet position.
+

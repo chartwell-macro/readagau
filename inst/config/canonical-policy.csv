@@ -1,0 +1,8 @@
+policy_version,product,semantic_family,status,source_priority,reason
+1,crop_report,state_long_history,all,state,State workbook owns state-level long histories
+1,crop_report,national_crop_history,historical,national_tables_11_12,National history tables own crop-level history
+1,crop_report,national_totals,all,national_tables_1_3,Aggregate winter and summer totals
+1,crop_report,current_snapshot,estimate_or_forecast,national_tables_4_10,Explicit current snapshot measures
+1,agricultural_commodities,history,historical,statistics,Statistics workbook owns long histories
+1,agricultural_commodities,outlook,estimate_forecast_projection,outlook,Outlook owns current release estimates and outlook
+1,all,unresolved_collision,all,conflict,Never choose by file order

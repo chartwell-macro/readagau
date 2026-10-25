@@ -1,0 +1,60 @@
+template:
+  bootstrap: 5
+
+home:
+  title: "readagau"
+  description: "Reproducible versioned Australian agricultural data"
+
+development:
+  mode: auto
+
+destination: site
+
+reference:
+  - title: "Package overview"
+    contents:
+      - readagau-package
+  - title: "Discover and download"
+    contents:
+      - list_agau_releases
+      - download_agau_release
+      - agau_cache_dir
+      - agau_detect_format
+  - title: "Read supported products"
+    contents:
+      - read_crop_report
+      - read_agricultural_commodities
+      - read_farm_productivity
+      - read_agau_forecast_history
+      - read_agau_prices
+  - title: "Series and vintage analysis"
+    contents:
+      - agau_series_catalog
+      - compare_agau_vintages
+      - agau_history_revision
+      - agau_forecast_revision
+      - agau_forecast_error
+  - title: "Validation and contracts"
+    contents:
+      - validate_agau_release
+      - agau_observation_schema
+      - agau_release_manifest_schema
+      - agau_raw_asset_manifest_schema
+      - agau_source_catalog
+  - title: "Metadata and utilities"
+    contents:
+      - agau_attribution
+      - crop_report_attribution
+      - agau_status
+      - agau_missing_reason
+
+articles:
+  - title: "Work with readagau"
+    navbar: ~
+    contents:
+      - source-files-and-vintages
+      - crop-report-tables
+      - agricultural-commodities-and-acs
+      - farm-productivity-methods
+      - comparing-revisions-and-errors
+      - weekly-commodity-prices

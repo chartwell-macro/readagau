@@ -1,0 +1,9 @@
+cff-version: 1.2.0
+message: "If you use readagau, please cite the package and the underlying official source."
+title: "readagau: Reproducible Australian Agricultural Data"
+type: software
+authors:
+  - family-names: Macro
+    given-names: Chartwell
+version: 0.1.0
+license: MIT

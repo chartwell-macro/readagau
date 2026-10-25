@@ -1,0 +1,31 @@
+Package: readagau
+Type: Package
+Title: Reproducible Australian Agricultural Data
+Version: 0.1.0
+Authors@R: person("Chartwell", "Macro", role = c("aut", "cre"),
+    email = "chartwellmacro@gmail.com")
+Description: Discovers, caches, parses and compares versioned Australian
+    agricultural time-series releases published by the Australian Bureau of
+    Agricultural and Resource Economics and Sciences. Source-faithful and
+    canonical views retain workbook, release and content-hash provenance.
+License: MIT + file LICENSE
+Depends:
+    R (>= 4.1.0)
+SystemRequirements: Poppler (pdftotext)
+Encoding: UTF-8
+RoxygenNote: 7.3.3
+Imports:
+    digest,
+    httr2,
+    readxl,
+    rvest,
+    tibble,
+    xml2
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    withr
+VignetteBuilder: knitr
+Config/testthat/edition: 3
+Config/Needs/website: r-lib/pkgdown

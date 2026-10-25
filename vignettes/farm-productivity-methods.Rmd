@@ -1,0 +1,28 @@
+---
+title: "Farm productivity methods and revisions"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Farm productivity methods and revisions}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The supporting workbook contains 19 conventional and seven climate-adjusted
+tables across industries, states and regions. Each observation identifies its
+method, industry, geography type and financial-year basis.
+
+Source financial years may use either a shortened end year (`1999-00`) or a
+full end year (`1999-2000`). The two labels have the same date contract:
+`1999-07-01` through `2000-06-30`. The start is any four-digit year whose
+one-year endpoint remains four digits, so `1899-00` and `1899-1900` both map
+to `1899-07-01` through `1900-06-30`. Incoherent and malformed simple ranges,
+including whitespace or punctuation substitutions around the delimiter,
+concatenated years and invalid start-year widths, are rejected with a typed
+validation error. The rule is shape-based rather than a list of widths:
+numeric runs separated only by punctuation/whitespace and all-digit tokens
+longer than four characters fail closed. Named and multi-year summary labels
+remain undated.
+
+The 2022–23 to 2024–25 climate adjustment is retained as an interim
+methodology regime. Because ABARES republishes revised histories, each annual
+workbook is a new vintage rather than an in-place replacement.
